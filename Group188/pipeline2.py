@@ -1,29 +1,31 @@
-import re, time, pickle, random
+import re, time, pickle
 import pandas as pd
 import numpy as np
-from scipy import sparse
 from bs4 import BeautifulSoup
 from nltk.tokenize import WordPunctTokenizer
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.multiclass import OneVsRestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
 
-np.random.seed(870963)
-sample = 0.01
+seed = 895376
+sample = 0.05  # 5%
 
 
 class Pipeline:
 
     def __init__(self):
-        # Vectorizer
-        self.vectorizer = TfidfVectorizer(stop_words='english')
-        # Classifier
-        # self.classifier = OneVsRestClassifier(LogisticRegression(solver='sag'), n_jobs=1)
-        self.classifier = OneVsRestClassifier(LinearSVC(penalty='l2', dual=True, random_state=870963, C=1), n_jobs=1)
-        # self.classifier = OneVsRestClassifier(MultinomialNB(fit_prior=True, class_prior=None))
+        self.vectorizer = TfidfVectorizer(input='content', encoding='utf-8',
+                                          decode_error='strict', strip_accents=None, lowercase=True,
+                                          preprocessor=None, tokenizer=None, analyzer='word',
+                                          stop_words='english', token_pattern=r"(?u)\b\w\w+\b",
+                                          ngram_range=(1, 3), max_df=1.0, min_df=1,
+                                          max_features=25000, vocabulary=None, binary=False,
+                                          dtype=np.float64, norm='l2')
+        self.classifier = LogisticRegression(penalty='l2', dual=False, tol=1e-4, C=1.0,
+                                             fit_intercept=True, intercept_scaling=1, class_weight='balanced',
+                                             random_state=seed, solver='sag', max_iter=100,
+                                             multi_class='multinomial', n_jobs=4)
         # Raw file
         self.train_file = "raw/train_tweets.txt"
         self.test_file = "raw/test_tweets_unlabeled.txt"
@@ -93,13 +95,17 @@ class Pipeline:
             for line in file:
                 train_label.append(int(line))
         if sampling:
-            _, train_vector, _, train_label = train_test_split(train_vector, train_label, test_size=sample)
+            _, train_vector, _, train_label = train_test_split(train_vector, train_label, test_size=sample,
+                                                               random_state=seed)
         print("Data: ", train_vector.shape)
-        X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.1, random_state=870963)
+        X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.1, random_state=seed)
+        print("Training set has {} instances. Test set has {} instances.".format(X_train.shape[0], X_evl.shape[0]))
         start = time.time()
         print("Training Classifier...")
         self.classifier.fit(X_train, y_train)
-        print("Training successfully in: %s seconds " % (time.time() - start))
+        print("Training successfully in %s seconds " % (time.time() - start))
+        # print("Intercept: ", self.classifier.intercept_)
+        # print("Coefficient: ", self.classifier.coef_)
         print("Evaluating...")
         pred_labels = self.classifier.predict(X_evl)
         print("Evaluate Accuracy: %s" % (accuracy_score(y_evl, pred_labels)))
@@ -116,6 +122,6 @@ class Pipeline:
 
 pipe = Pipeline()
 # pipe.clean()
-# pipe.vectorize()
+pipe.vectorize()
 pipe.evaluate(sampling=True)
-pipe.classify()
+# pipe.classify()
