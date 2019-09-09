@@ -20,6 +20,7 @@ sample = 0.05  # 5%
 class Pipeline:
 
     def __init__(self):
+        self.tokenizer = WordPunctTokenizer()
         self.vectorizer = TfidfVectorizer(input='content', encoding='utf-8',
                                           decode_error='strict', strip_accents=None, lowercase=True,
                                           preprocessor=None, tokenizer=None, analyzer='word',
@@ -82,21 +83,39 @@ class Pipeline:
         words = tok.tokenize(text)
         return " ".join(words)
 
+    # def tokenize(self):
+    #     train_file_cleaned = open(self.train_file_cleaned, 'w', encoding='utf-8')
+    #     test_file_cleaned = open(self.test_file_cleaned, 'w', encoding='utf-8')
+    #     total_file_cleaned = open(self.total_file_cleaned, 'w', encoding='utf-8')
+    #     train_label = open(self.train_label, 'w', encoding='utf-8')
+    #     with open(self.train_file, encoding='utf-8') as train_data:
+    #         for line in train_data:
+    #             label, tweet = line.strip().split('\t', 1)[:2]
+    #             train_label.write(label + '\n')
+    #             tokenized_tweet = " ".join(self.tokenizer.tokenize(tweet))
+    #             train_file_cleaned.write(tokenized_tweet + '\n')
+    #             total_file_cleaned.write(tokenized_tweet + '\n')
+    #     with open(self.test_file, encoding='utf-8') as test_data:
+    #         for line in test_data:
+    #             tokenized_tweet = " ".join(self.tokenizer.tokenize(line))
+    #             test_file_cleaned.write(tokenized_tweet + '\n')
+    #             total_file_cleaned.write(tokenized_tweet + '\n')    
+
     def vectorize(self):
-        total_file_cleaned = open(self.total_file_cleaned)
+        total_file_cleaned = open(self.total_file_cleaned, encoding='utf-8')
         print("Fitting vectorizer...")
         self.vectorizer.fit(total_file_cleaned)
         print("Vectorizing train file...")
-        train_file_cleaned = open(self.train_file_cleaned)
+        train_file_cleaned = open(self.train_file_cleaned, encoding='utf-8')
         train_vector = self.vectorizer.transform(train_file_cleaned)
         print("Train vector: ", train_vector.shape)
         print("Vectorizing test file...")
-        test_file_cleaned = open(self.test_file_cleaned)
+        test_file_cleaned = open(self.test_file_cleaned, encoding='utf-8')
         test_vector = self.vectorizer.transform(test_file_cleaned)
         print("Test vector: ", test_vector.shape)
 
         train_label = []
-        with open(self.train_label) as file:
+        with open(self.train_label, encoding='utf-8') as file:
             for line in file:
                 train_label.append(int(line))
 
@@ -120,9 +139,6 @@ class Pipeline:
         with open(self.train_label) as file:
             for line in file:
                 train_label.append(int(line))
-        # if sampling:
-        #     _, train_vector, _, train_label = train_test_split(train_vector, train_label, test_size=sample,
-        #                                                        random_state=seed)
 
         if sample:
             X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.5, random_state=seed)
@@ -152,7 +168,7 @@ class Pipeline:
 
 
 pipe = Pipeline()
-# pipe.clean()
+# pipe.tokenize()
 pipe.vectorize()
 pipe.evaluate(sampling=True)
 # pipe.classify()
