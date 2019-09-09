@@ -11,7 +11,7 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC
 
-np.random.seed(870963)
+np.random.seed(895376)
 sample = 0.01
 
 
@@ -22,7 +22,11 @@ class Pipeline:
         self.vectorizer = TfidfVectorizer(stop_words='english')
         # Classifier
         # self.classifier = OneVsRestClassifier(LogisticRegression(solver='sag'), n_jobs=1)
-        self.classifier = OneVsRestClassifier(LinearSVC(penalty='l2', dual=True, random_state=870963, C=1), n_jobs=1)
+        self.classifier = OneVsRestClassifier(LinearSVC(penalty='l2', loss='squared_hinge', dual=True,\
+                                                        tol=0.0001, C=1.0, multi_class='ovr',\
+                                                        fit_intercept=True, intercept_scaling=1,\
+                                                        class_weight=None, verbose=0,\
+                                                        random_state=895376, max_iter=1000), n_jobs=1)
         # self.classifier = OneVsRestClassifier(MultinomialNB(fit_prior=True, class_prior=None))
         # Raw file
         self.train_file = "raw/train_tweets.txt"
@@ -95,7 +99,7 @@ class Pipeline:
         if sampling:
             _, train_vector, _, train_label = train_test_split(train_vector, train_label, test_size=sample)
         print("Data: ", train_vector.shape)
-        X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.1, random_state=870963)
+        X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.1, random_state=895376)
         start = time.time()
         print("Training Classifier...")
         self.classifier.fit(X_train, y_train)

@@ -7,6 +7,11 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import LinearSVC
+from sklearn.feature_selection import *
+
+
 
 seed = 895376
 sample = 0.05  # 5%
@@ -18,14 +23,19 @@ class Pipeline:
         self.vectorizer = TfidfVectorizer(input='content', encoding='utf-8',
                                           decode_error='strict', strip_accents=None, lowercase=True,
                                           preprocessor=None, tokenizer=None, analyzer='word',
-                                          stop_words='english', token_pattern=r"(?u)\b\w\w+\b",
-                                          ngram_range=(1, 3), max_df=1.0, min_df=1,
-                                          max_features=25000, vocabulary=None, binary=False,
+                                          stop_words=None, token_pattern=r"(?u)\b\w\w+\b",
+                                          ngram_range=(1, 1), max_df=1.0, min_df=1,
+                                          max_features=50000, vocabulary=None, binary=False,
                                           dtype=np.float64, norm='l2')
-        self.classifier = LogisticRegression(penalty='l2', dual=False, tol=1e-4, C=1.0,
-                                             fit_intercept=True, intercept_scaling=1, class_weight='balanced',
-                                             random_state=seed, solver='sag', max_iter=100,
-                                             multi_class='multinomial', n_jobs=4)
+        # self.classifier = LogisticRegression(penalty='l2', dual=False, tol=1e-4, C=1.0,
+        #                                      fit_intercept=True, intercept_scaling=1, class_weight='balanced',
+        #                                      random_state=seed, solver='sag', max_iter=100,
+        #                                      multi_class='multinomial', n_jobs=4)
+        self.classifier = LinearSVC(penalty='l2', loss='squared_hinge', dual=True,\
+                                    tol=0.0001, C=1.0, multi_class='ovr',\
+                                    fit_intercept=True, intercept_scaling=1,\
+                                    class_weight=None, verbose=0,\
+                                    random_state=seed, max_iter=1000)
         # Raw file
         self.train_file = "raw/train_tweets.txt"
         self.test_file = "raw/test_tweets_unlabeled.txt"
@@ -61,15 +71,15 @@ class Pipeline:
     @staticmethod
     def tokenize(text):
         tok = WordPunctTokenizer()
-        pat1 = r'@[A-Za-z0-9]+'
-        pat2 = r'https?://[A-Za-z0-9./]+'
-        combined_pat = r'|'.join((pat1, pat2))
-        soup = BeautifulSoup(text, 'lxml')
-        souped = soup.get_text()
-        clean = re.sub(combined_pat, '', souped)
-        letters_only = re.sub("[^a-zA-Z]", " ", clean)
-        lower_case = letters_only.lower()
-        words = tok.tokenize(lower_case)
+        # pat1 = r'@[A-Za-z0-9]+'
+        # pat2 = r'https?://[A-Za-z0-9./]+'
+        # combined_pat = r'|'.join((pat1, pat2))
+        # soup = BeautifulSoup(text, 'lxml')
+        # souped = soup.get_text()
+        # clean = re.sub(combined_pat, '', souped)
+        # letters_only = re.sub("[^a-zA-Z]", " ", clean)
+        # lower_case = letters_only.lower()
+        words = tok.tokenize(text)
         return " ".join(words)
 
     def vectorize(self):
@@ -84,7 +94,23 @@ class Pipeline:
         test_file_cleaned = open(self.test_file_cleaned)
         test_vector = self.vectorizer.transform(test_file_cleaned)
         print("Test vector: ", test_vector.shape)
-        print("Saving...")
+
+        train_label = []
+        with open(self.train_label) as file:
+            for line in file:
+                train_label.append(int(line))
+
+        # print("Feature selecting...")
+        # _, train_vector_1, _, train_label_1 = train_test_split(train_vector, train_label, test_size=sample,
+        #                                                        random_state=seed)
+        # feature_select = SelectKBest(chi2, k=50000)
+        # feature_select.fit(train_vector_1, train_label_1)
+        # train_vector = feature_select.transform(train_vector)
+        # test_vector = feature_select.transform(test_vector)
+        # print("Train vector: ", train_vector.shape)
+        # print("Test vector: ", test_vector.shape)
+        # print("Saving...")
+
         pickle.dump(train_vector, open(self.train_vector, 'wb'))
         pickle.dump(test_vector, open(self.test_vector, 'wb'))
 
@@ -94,11 +120,16 @@ class Pipeline:
         with open(self.train_label) as file:
             for line in file:
                 train_label.append(int(line))
-        if sampling:
-            _, train_vector, _, train_label = train_test_split(train_vector, train_label, test_size=sample,
-                                                               random_state=seed)
-        print("Data: ", train_vector.shape)
-        X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.1, random_state=seed)
+        # if sampling:
+        #     _, train_vector, _, train_label = train_test_split(train_vector, train_label, test_size=sample,
+        #                                                        random_state=seed)
+
+        if sample:
+            X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.5, random_state=seed)
+            _, X_train, _, y_train = train_test_split(X_train, y_train, test_size=2*sample, random_state=seed)
+            _, X_evl, _, y_evl = train_test_split(X_evl, y_evl, test_size=2*sample, random_state=seed)
+
+
         print("Training set has {} instances. Test set has {} instances.".format(X_train.shape[0], X_evl.shape[0]))
         start = time.time()
         print("Training Classifier...")
