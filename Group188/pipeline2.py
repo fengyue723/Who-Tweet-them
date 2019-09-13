@@ -15,6 +15,7 @@ from sklearn.feature_selection import *
 
 seed = 895376
 sample = 0.05  # 5%
+sample2 = 0.1
 
 
 class Pipeline:
@@ -25,7 +26,7 @@ class Pipeline:
                                           decode_error='strict', strip_accents=None, lowercase=True,
                                           preprocessor=None, tokenizer=None, analyzer='word',
                                           stop_words=None, token_pattern=r"(?u)\b\w\w+\b",
-                                          ngram_range=(1, 1), max_df=1.0, min_df=1,
+                                          ngram_range=(1, 3), max_df=1.0, min_df=1,
                                           max_features=50000, vocabulary=None, binary=False,
                                           dtype=np.float64, norm='l2')
         # self.classifier = LogisticRegression(penalty='l2', dual=False, tol=1e-4, C=1.0,
@@ -52,18 +53,18 @@ class Pipeline:
         self.test_label = "label/test_label.csv"
 
     def clean(self):
-        train_file_cleaned = open(self.train_file_cleaned, 'w')
-        test_file_cleaned = open(self.test_file_cleaned, 'w')
-        total_file_cleaned = open(self.total_file_cleaned, 'w')
-        train_label = open(self.train_label, 'w')
-        with open(self.train_file) as train_data:
+        train_file_cleaned = open(self.train_file_cleaned, 'w', encoding='utf-8')
+        test_file_cleaned = open(self.test_file_cleaned, 'w', encoding='utf-8')
+        total_file_cleaned = open(self.total_file_cleaned, 'w', encoding='utf-8')
+        train_label = open(self.train_label, 'w', encoding='utf-8')
+        with open(self.train_file, encoding='utf-8') as train_data:
             for line in train_data:
                 label, tweet = line.strip().split('\t', 1)[:2]
                 train_label.write(label + '\n')
                 tokenized_tweet = self.tokenize(tweet)
                 train_file_cleaned.write(tokenized_tweet + '\n')
                 total_file_cleaned.write(tokenized_tweet + '\n')
-        with open(self.test_file) as test_data:
+        with open(self.test_file, encoding='utf-8') as test_data:
             for line in test_data:
                 tokenized_tweet = self.tokenize(line)
                 test_file_cleaned.write(tokenized_tweet + '\n')
@@ -120,8 +121,8 @@ class Pipeline:
                 train_label.append(int(line))
 
         # print("Feature selecting...")
-        # _, train_vector_1, _, train_label_1 = train_test_split(train_vector, train_label, test_size=sample,
-        #                                                        random_state=seed)
+        # _, train_vector_1, _, train_label_1 = train_test_split(train_vector, train_label, 
+        #                                                        test_size=sample2, random_state=seed)
         # feature_select = SelectKBest(chi2, k=50000)
         # feature_select.fit(train_vector_1, train_label_1)
         # train_vector = feature_select.transform(train_vector)
@@ -140,7 +141,7 @@ class Pipeline:
             for line in file:
                 train_label.append(int(line))
 
-        if sample:
+        if sampling:
             X_train, X_evl, y_train, y_evl = train_test_split(train_vector, train_label, test_size=0.5, random_state=seed)
             _, X_train, _, y_train = train_test_split(X_train, y_train, test_size=2*sample, random_state=seed)
             _, X_evl, _, y_evl = train_test_split(X_evl, y_evl, test_size=2*sample, random_state=seed)
